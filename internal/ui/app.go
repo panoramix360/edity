@@ -93,7 +93,7 @@ func (m Model) View() tea.View {
 	rightWidth := m.width - leftWidth
 
 	mediaBin := m.renderMediaBin(leftWidth, topHeight)
-	preview := m.renderPreview(rightWidth, topHeight)
+	preview := m.renderPreview(rightWidth, topHeight, m.clips[m.selected])
 	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
 
 	timeline := m.renderTimeline(m.width, bottomHeight)
@@ -130,12 +130,19 @@ func (m Model) renderMediaBin(width, height int) string {
 	return paneStyle.Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
-func (m Model) renderPreview(width, height int) string {
-	content := headerStyle.Render("Preview") + "\n\n" +
-		dimStyle.Render("  No preview in v0.1\n\n") +
-		dimStyle.Render("  Press P to open in ffplay")
-
-	return paneStyle.Width(width).Height(height).Render(content)
+func (m Model) renderPreview(width, height int, c clip.Clip) string {
+	lines := []string{
+		headerStyle.Render("Preview"),
+		"",
+		"  " + filepath.Base(c.Path),
+		"",
+		dimStyle.Render("  Duration   " + formatDuration(c.Meta.Duration)),
+		dimStyle.Render("  Video      " + formatRes(c.Meta.Width, c.Meta.Height) + "  " + fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
+		dimStyle.Render("  Codec      " + c.Meta.Codec),
+		"",
+		dimStyle.Render("  Playback coming in v0.3"),
+	}
+	return paneStyle.Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
 func (m Model) renderTimeline(width, height int) string {
