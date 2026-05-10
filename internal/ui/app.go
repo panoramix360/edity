@@ -10,16 +10,33 @@ import (
 	"github.com/panoramix360/edity/internal/clip"
 )
 
+type Pane int
+
+const (
+	PaneMediaBin Pane = iota
+	PanePreview
+	PaneTimeline
+)
+
 var (
-	borderColor = lipgloss.Color("2") // terminal green
+	borderColor       = lipgloss.Color("8")
+	activeBorderColor = lipgloss.Color("10")
 
 	paneStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(borderColor)
 
+	activePaneStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(activeBorderColor)
+
 	headerStyle = lipgloss.NewStyle().
 			Foreground(borderColor).
 			Bold(true)
+
+	activeHeaderStyle = lipgloss.NewStyle().
+				Foreground(activeBorderColor).
+				Bold(true)
 
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("10")).
@@ -39,13 +56,18 @@ var (
 	statusStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8")).
 			PaddingLeft(1)
+
+	activePaneLabel = lipgloss.NewStyle().
+			Foreground(activeBorderColor).
+			Bold(true)
 )
 
 type Model struct {
-	clips    []clip.Clip
-	selected int
-	width    int
-	height   int
+	clips       []clip.Clip
+	selected    int
+	focusedPane Pane
+	width       int
+	height      int
 }
 
 func New(clips []clip.Clip) Model {
@@ -56,6 +78,7 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
+// Q: I believe we would need to map this method in a more splitted way to not clutter it
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -65,12 +88,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "tab":
+			m.focusedPane = (m.focusedPane + 1) % 3
+		case "shift+tab":
+			m.focusedPane = (m.focusedPane + 2) % 3
 		case "up", "k":
-			if m.selected > 0 {
+			if m.focusedPane == PaneMediaBin && m.selected > 0 {
 				m.selected--
 			}
 		case "down", "j":
-			if m.selected < len(m.clips)-1 {
+			if m.focusedPane == PaneMediaBin && m.selected < len(m.clips)-1 {
 				m.selected++
 			}
 		}
@@ -78,12 +105,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) paneStyle(p Pane) lipgloss.Style {
+	if m.focusedPane == p {
+		return activePaneStyle
+	}
+	return paneStyle
+}
+
+func (m Model) headerFor(p Pane, label string) string {
+	if m.focusedPane == p {
+		return activeHeaderStyle.Render(label)
+	}
+	return headerStyle.Render(label)
+}
+
 func (m Model) View() tea.View {
 	if m.width == 0 {
 		return tea.NewView("")
 	}
 
-	statusBar := statusStyle.Render("q quit   ↑↓/jk navigate")
+	paneNames := []string{"Media Bin", "Preview", "Timeline"}
+	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
+	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   " + activeLabel)
 	statusHeight := 1
 
 	topHeight := (m.height - statusHeight) * 2 / 3
@@ -107,7 +150,7 @@ func (m Model) View() tea.View {
 func (m Model) renderMediaBin(width, height int) string {
 	inner := width - 2
 	var lines []string
-	lines = append(lines, headerStyle.Render("Media Bin"))
+	lines = append(lines, m.headerFor(PaneMediaBin, "Media Bin"))
 	lines = append(lines, "")
 
 	for i, c := range m.clips {
@@ -127,12 +170,12 @@ func (m Model) renderMediaBin(width, height int) string {
 		lines = append(lines, metaLine)
 	}
 
-	return paneStyle.Width(width).Height(height).Render(strings.Join(lines, "\n"))
+	return m.paneStyle(PaneMediaBin).Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
 func (m Model) renderPreview(width, height int, c clip.Clip) string {
 	lines := []string{
-		headerStyle.Render("Preview"),
+		m.headerFor(PanePreview, "Preview"),
 		"",
 		"  " + filepath.Base(c.Path),
 		"",
@@ -142,13 +185,13 @@ func (m Model) renderPreview(width, height int, c clip.Clip) string {
 		"",
 		dimStyle.Render("  Playback coming in v0.3"),
 	}
-	return paneStyle.Width(width).Height(height).Render(strings.Join(lines, "\n"))
+	return m.paneStyle(PanePreview).Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
 func (m Model) renderTimeline(width, height int) string {
 	innerW := width - 2
 	var lines []string
-	lines = append(lines, headerStyle.Render("Timeline"))
+	lines = append(lines, m.headerFor(PaneTimeline, "Timeline"))
 	lines = append(lines, "")
 
 	if len(m.clips) == 0 {
@@ -190,7 +233,7 @@ func (m Model) renderTimeline(width, height int) string {
 		lines = append(lines, dimStyle.Render(info))
 	}
 
-	return paneStyle.Width(width).Height(height).Render(strings.Join(lines, "\n"))
+	return m.paneStyle(PaneTimeline).Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
 func formatDuration(secs float64) string {
