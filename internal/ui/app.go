@@ -28,6 +28,14 @@ var (
 	dimStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8"))
 
+	selectedBarStyle = lipgloss.NewStyle().
+				Background(lipgloss.Color("10")).
+				Foreground(lipgloss.Color("0"))
+
+	normalBarStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("8")).
+			Foreground(lipgloss.Color("15"))
+
 	statusStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8")).
 			PaddingLeft(1)
@@ -144,20 +152,25 @@ func (m Model) renderTimeline(width, height int) string {
 			total += c.Meta.Duration
 		}
 
-		fills := []string{"█", "▓", "░"}
 		var sb strings.Builder
+		remaining := innerW
 		for i, c := range m.clips {
-			ratio := c.Meta.Duration / total
-			w := max(1, int(ratio*float64(innerW)))
-			label := truncate(filepath.Base(c.Path), w)
-			block := label + strings.Repeat(fills[i%len(fills)], w-len([]rune(label)))
-			if i == m.selected {
-				sb.WriteString(selectedStyle.Render(block))
+			var w int
+			if i == len(m.clips)-1 {
+				w = remaining
 			} else {
-				sb.WriteString(block)
+				w = max(1, int(c.Meta.Duration/total*float64(innerW)))
+				remaining -= w
+			}
+			label := truncate(filepath.Base(c.Path), w)
+			padded := label + strings.Repeat(" ", w-len([]rune(label)))
+			if i == m.selected {
+				sb.WriteString(selectedBarStyle.Render(padded))
+			} else {
+				sb.WriteString(normalBarStyle.Render(padded))
 			}
 		}
-		lines = append(lines, " "+sb.String())
+		lines = append(lines, sb.String())
 		lines = append(lines, "")
 
 		c := m.clips[m.selected]
