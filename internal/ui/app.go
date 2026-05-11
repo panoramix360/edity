@@ -124,6 +124,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.nextBoundary()
 			}
+		case "s":
+			if m.focusedPane == PaneTimeline {
+				m = m.splitAtPlayhead()
+			}
 		}
 	}
 	return m, nil
@@ -132,7 +136,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) timelineTotal() float64 {
 	total := 0.0
 	for _, c := range m.clips {
-		total += c.Meta.Duration
+		total += c.Duration()
 	}
 	return total
 }
@@ -142,10 +146,44 @@ func (m Model) clipBoundaries() []float64 {
 	t := 0.0
 	b = append(b, t)
 	for _, c := range m.clips {
-		t += c.Meta.Duration
+		t += c.Duration()
 		b = append(b, t)
 	}
 	return b
+}
+
+func (m Model) clipAtPlayhead() (idx int, offsetInClip float64) {
+	t := 0.0
+	for i, c := range m.clips {
+		end := t + c.Duration()
+		if m.playheadPos < end || i == len(m.clips)-1 {
+			return i, m.playheadPos - t
+		}
+		t = end
+	}
+	return 0, 0
+}
+
+func (m Model) splitAtPlayhead() Model {
+	if len(m.clips) == 0 {
+		return m
+	}
+	idx, offset := m.clipAtPlayhead()
+	if offset <= 0 || offset >= m.clips[idx].Duration() {
+		return m
+	}
+	orig := m.clips[idx]
+	left := orig
+	left.OutPoint = orig.InPoint + offset
+	right := orig
+	right.InPoint = orig.InPoint + offset
+
+	newClips := make([]clip.Clip, 0, len(m.clips)+1)
+	newClips = append(newClips, m.clips[:idx]...)
+	newClips = append(newClips, left, right)
+	newClips = append(newClips, m.clips[idx+1:]...)
+	m.clips = newClips
+	return m
 }
 
 func (m Model) nextBoundary() float64 {
@@ -245,7 +283,7 @@ func (m Model) renderMediaBin(width, height int) string {
 
 	for i, c := range m.clips {
 		name := filepath.Base(c.Path)
-		dur := formatDuration(c.Meta.Duration)
+		dur := formatDuration(c.Duration())
 		res := formatRes(c.Meta.Width, c.Meta.Height)
 		fps := fmt.Sprintf("%.2ffps", c.Meta.FrameRate)
 
@@ -269,7 +307,7 @@ func (m Model) renderPreview(width, height int, c clip.Clip) string {
 		"",
 		"  " + filepath.Base(c.Path),
 		"",
-		dimStyle.Render("  Duration   " + formatDuration(c.Meta.Duration)),
+		dimStyle.Render("  Duration   " + formatDuration(c.Duration())),
 		dimStyle.Render("  Video      " + formatRes(c.Meta.Width, c.Meta.Height) + "  " + fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
 		dimStyle.Render("  Codec      " + c.Meta.Codec),
 		"",
@@ -308,7 +346,7 @@ func (m Model) renderTimeline(width, height int) string {
 			if i == len(m.clips)-1 {
 				w = remaining
 			} else {
-				w = max(1, int(c.Meta.Duration/total*float64(innerW)))
+				w = max(1, int(c.Duration()/total*float64(innerW)))
 				remaining -= w
 			}
 			label := truncate(filepath.Base(c.Path), w)
@@ -325,7 +363,7 @@ func (m Model) renderTimeline(width, height int) string {
 		c := m.clips[m.selected]
 		info := fmt.Sprintf("  %s   %s   %s   %.2ffps",
 			filepath.Base(c.Path),
-			formatDuration(c.Meta.Duration),
+			formatDuration(c.Duration()),
 			formatRes(c.Meta.Width, c.Meta.Height),
 			c.Meta.FrameRate,
 		)

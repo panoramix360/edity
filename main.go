@@ -38,7 +38,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", path, err)
 			os.Exit(1)
 		}
-		clips = append(clips, clip.Clip{Path: path, Meta: meta})
+		clips = append(clips, clip.Clip{Path: path, Meta: meta, InPoint: 0, OutPoint: meta.Duration})
 	}
 
 	p := tea.NewProgram(ui.New(clips))
