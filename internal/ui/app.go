@@ -167,6 +167,34 @@ func (m Model) prevBoundary() float64 {
 	return 0
 }
 
+func (m Model) renderRuler(innerW int, total float64) string {
+	buf := []rune(strings.Repeat(" ", innerW))
+	interval := rulerInterval(total, innerW)
+	for t := 0.0; t <= total; t += interval {
+		col := int(t / total * float64(innerW))
+		if col >= innerW {
+			col = innerW - 1
+		}
+		for i, r := range []rune(formatRulerMark(t)) {
+			if col+i < innerW {
+				buf[col+i] = r
+			}
+		}
+	}
+	return dimStyle.Render(string(buf))
+}
+
+func rulerInterval(total float64, width int) float64 {
+	labelWidth := float64(len(formatRulerMark(total))) + 2
+	minInterval := labelWidth * total / float64(width)
+	for _, s := range []float64{1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600, 1800, 3600} {
+		if s >= minInterval {
+			return s
+		}
+	}
+	return 3600
+}
+
 func (m Model) paneStyle(p Pane) lipgloss.Style {
 	if m.focusedPane == p {
 		return activePaneStyle
@@ -261,6 +289,8 @@ func (m Model) renderTimeline(width, height int) string {
 	} else {
 		total := m.timelineTotal()
 
+		lines = append(lines, m.renderRuler(innerW, total))
+
 		playheadCol := 0
 		if total > 0 {
 			playheadCol = int(m.playheadPos / total * float64(innerW))
@@ -306,17 +336,28 @@ func (m Model) renderTimeline(width, height int) string {
 	return m.paneStyle(PaneTimeline).Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
+func decomposeSecs(secs float64) (h, m, s int) {
+	h = int(secs) / 3600
+	m = (int(secs) % 3600) / 60
+	s = int(secs) % 60
+	return
+}
+
+func formatRulerMark(secs float64) string {
+	h, m, s := decomposeSecs(secs)
+	if h > 0 {
+		return fmt.Sprintf("%d:%02d:%02d", h, m, s)
+	}
+	return fmt.Sprintf("%02d:%02d", m, s)
+}
+
 func formatDuration(secs float64) string {
-	h := int(secs) / 3600
-	m := (int(secs) % 3600) / 60
-	s := int(secs) % 60
+	h, m, s := decomposeSecs(secs)
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
 
 func formatPlayhead(secs float64) string {
-	h := int(secs) / 3600
-	m := (int(secs) % 3600) / 60
-	s := int(secs) % 60
+	h, m, s := decomposeSecs(secs)
 	cs := int(secs*100) % 100
 	return fmt.Sprintf("%02d:%02d:%02d.%02d", h, m, s, cs)
 }
