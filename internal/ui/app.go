@@ -116,6 +116,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = min(m.timelineTotal(), m.playheadPos+5)
 			}
+		case "[":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = m.prevBoundary()
+			}
+		case "]":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = m.nextBoundary()
+			}
 		}
 	}
 	return m, nil
@@ -127,6 +135,36 @@ func (m Model) timelineTotal() float64 {
 		total += c.Meta.Duration
 	}
 	return total
+}
+
+func (m Model) clipBoundaries() []float64 {
+	b := make([]float64, 0, len(m.clips)+1)
+	t := 0.0
+	b = append(b, t)
+	for _, c := range m.clips {
+		t += c.Meta.Duration
+		b = append(b, t)
+	}
+	return b
+}
+
+func (m Model) nextBoundary() float64 {
+	for _, b := range m.clipBoundaries() {
+		if b > m.playheadPos+0.01 {
+			return b
+		}
+	}
+	return m.timelineTotal()
+}
+
+func (m Model) prevBoundary() float64 {
+	boundaries := m.clipBoundaries()
+	for i := len(boundaries) - 1; i >= 0; i-- {
+		if boundaries[i] < m.playheadPos-0.01 {
+			return boundaries[i]
+		}
+	}
+	return 0
 }
 
 func (m Model) paneStyle(p Pane) lipgloss.Style {
@@ -150,7 +188,7 @@ func (m Model) View() tea.View {
 
 	paneNames := []string{"Media Bin", "Preview", "Timeline"}
 	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
-	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   " + activeLabel)
+	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   " + activeLabel)
 	statusHeight := 1
 
 	topHeight := (m.height - statusHeight) * 2 / 3
