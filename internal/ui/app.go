@@ -128,6 +128,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusedPane == PaneTimeline {
 				m = m.splitAtPlayhead()
 			}
+		case ",":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = max(0, m.playheadPos-m.frameStep())
+			}
+		case ".":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = min(m.timelineTotal(), m.playheadPos+m.frameStep())
+			}
 		}
 	}
 	return m, nil
@@ -205,6 +213,15 @@ func (m Model) prevBoundary() float64 {
 	return 0
 }
 
+func (m Model) frameStep() float64 {
+	idx, _ := m.clipAtPlayhead()
+	fps := m.clips[idx].Meta.FrameRate
+	if fps <= 0 {
+		return 1.0 / 30
+	}
+	return 1.0 / fps
+}
+
 func (m Model) renderRuler(innerW int, total float64) string {
 	buf := []rune(strings.Repeat(" ", innerW))
 	interval := rulerInterval(total, innerW)
@@ -254,7 +271,7 @@ func (m Model) View() tea.View {
 
 	paneNames := []string{"Media Bin", "Preview", "Timeline"}
 	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
-	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   " + activeLabel)
+	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   ,/. frame   " + activeLabel)
 	statusHeight := 1
 
 	topHeight := (m.height - statusHeight) * 2 / 3
