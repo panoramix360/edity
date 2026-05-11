@@ -66,6 +66,7 @@ type Model struct {
 	clips       []clip.Clip
 	selected    int
 	focusedPane Pane
+	playheadPos float64
 	width       int
 	height      int
 }
@@ -78,7 +79,6 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// Q: I believe we would need to map this method in a more splitted way to not clutter it
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -100,9 +100,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusedPane == PaneMediaBin && m.selected < len(m.clips)-1 {
 				m.selected++
 			}
+		case "left", "h":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = max(0, m.playheadPos-1)
+			}
+		case "right", "l":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = min(m.timelineTotal(), m.playheadPos+1)
+			}
+		case "shift+left":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = max(0, m.playheadPos-5)
+			}
+		case "shift+right":
+			if m.focusedPane == PaneTimeline {
+				m.playheadPos = min(m.timelineTotal(), m.playheadPos+5)
+			}
 		}
 	}
 	return m, nil
+}
+
+func (m Model) timelineTotal() float64 {
+	total := 0.0
+	for _, c := range m.clips {
+		total += c.Meta.Duration
+	}
+	return total
 }
 
 func (m Model) paneStyle(p Pane) lipgloss.Style {
@@ -126,7 +150,7 @@ func (m Model) View() tea.View {
 
 	paneNames := []string{"Media Bin", "Preview", "Timeline"}
 	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
-	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   " + activeLabel)
+	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   " + activeLabel)
 	statusHeight := 1
 
 	topHeight := (m.height - statusHeight) * 2 / 3
@@ -197,10 +221,17 @@ func (m Model) renderTimeline(width, height int) string {
 	if len(m.clips) == 0 {
 		lines = append(lines, dimStyle.Render("  No clips loaded"))
 	} else {
-		total := 0.0
-		for _, c := range m.clips {
-			total += c.Meta.Duration
+		total := m.timelineTotal()
+
+		playheadCol := 0
+		if total > 0 {
+			playheadCol = int(m.playheadPos / total * float64(innerW))
+			if playheadCol >= innerW {
+				playheadCol = innerW - 1
+			}
 		}
+		playheadRow := strings.Repeat(" ", playheadCol) + lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render("▼")
+		lines = append(lines, playheadRow)
 
 		var sb strings.Builder
 		remaining := innerW
@@ -231,6 +262,7 @@ func (m Model) renderTimeline(width, height int) string {
 			c.Meta.FrameRate,
 		)
 		lines = append(lines, dimStyle.Render(info))
+		lines = append(lines, dimStyle.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(m.playheadPos))))
 	}
 
 	return m.paneStyle(PaneTimeline).Width(width).Height(height).Render(strings.Join(lines, "\n"))
@@ -241,6 +273,14 @@ func formatDuration(secs float64) string {
 	m := (int(secs) % 3600) / 60
 	s := int(secs) % 60
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+}
+
+func formatPlayhead(secs float64) string {
+	h := int(secs) / 3600
+	m := (int(secs) % 3600) / 60
+	s := int(secs) % 60
+	cs := int(secs*100) % 100
+	return fmt.Sprintf("%02d:%02d:%02d.%02d", h, m, s, cs)
 }
 
 func formatRes(w, h int) string {
