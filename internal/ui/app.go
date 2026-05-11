@@ -103,26 +103,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "left", "h":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = max(0, m.playheadPos-1)
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "right", "l":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = min(m.timelineTotal(), m.playheadPos+1)
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "shift+left":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = max(0, m.playheadPos-5)
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "shift+right":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = min(m.timelineTotal(), m.playheadPos+5)
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "[":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.prevBoundary()
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "]":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.nextBoundary()
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "s":
 			if m.focusedPane == PaneTimeline {
@@ -131,10 +137,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ",":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = max(0, m.playheadPos-m.frameStep())
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		case ".":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = min(m.timelineTotal(), m.playheadPos+m.frameStep())
+				m.selected, _ = m.clipAtPlayhead()
 			}
 		}
 	}
