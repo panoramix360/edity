@@ -53,6 +53,11 @@ var (
 			Background(lipgloss.Color("8")).
 			Foreground(lipgloss.Color("15"))
 
+	playheadCursorStyle = lipgloss.NewStyle().
+				Background(lipgloss.Color("9")).
+				Foreground(lipgloss.Color("15")).
+				Bold(true)
+
 	statusStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8")).
 			PaddingLeft(1)
@@ -401,6 +406,7 @@ func (m Model) renderTimeline(width, height int) string {
 
 		var sb strings.Builder
 		remaining := innerW
+		colStart := 0
 		for i, c := range m.clips {
 			var w int
 			if i == len(m.clips)-1 {
@@ -410,12 +416,27 @@ func (m Model) renderTimeline(width, height int) string {
 				remaining -= w
 			}
 			label := truncate(filepath.Base(c.Path), w)
-			padded := label + strings.Repeat(" ", w-len([]rune(label)))
+			runes := []rune(label + strings.Repeat(" ", w-len([]rune(label))))
+
+			barStyle := normalBarStyle
 			if i == m.selected {
-				sb.WriteString(selectedBarStyle.Render(padded))
-			} else {
-				sb.WriteString(normalBarStyle.Render(padded))
+				barStyle = selectedBarStyle
 			}
+
+			localCol := playheadCol - colStart
+			if localCol >= 0 && localCol < w {
+				if localCol > 0 {
+					sb.WriteString(barStyle.Render(string(runes[:localCol])))
+				}
+				sb.WriteString(playheadCursorStyle.Render(string(runes[localCol : localCol+1])))
+				if localCol+1 < w {
+					sb.WriteString(barStyle.Render(string(runes[localCol+1:])))
+				}
+			} else {
+				sb.WriteString(barStyle.Render(string(runes)))
+			}
+
+			colStart += w
 		}
 		lines = append(lines, sb.String())
 		lines = append(lines, "")
