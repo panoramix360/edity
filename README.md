@@ -13,6 +13,10 @@ edity clip1.mp4 clip2.mp4 clip3.mp4
 ![status: early development](https://img.shields.io/badge/status-early%20development-orange)
 ![license: MIT](https://img.shields.io/badge/license-MIT-blue)
 
+<p align="center">
+  <img src="image.png" alt="demonstration image" />
+</p>
+
 ## Why
 
 Recording gameplay, simulations, or dev demos is easy. Editing them shouldn't require learning Video Editing tools for us devs. `edity` opens a TUI directly in your terminal — a timeline, a media bin, and a preview — all keyboard-driven, no mouse required.
