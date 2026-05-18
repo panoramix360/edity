@@ -13,10 +13,12 @@ type Meta struct {
 	Height    int
 	Codec     string
 	FrameRate float64
+	HasAudio  bool
 }
 
 type probeOutput struct {
 	Streams []struct {
+		CodecType  string `json:"codec_type"`
 		CodecName  string `json:"codec_name"`
 		Width      int    `json:"width"`
 		Height     int    `json:"height"`
@@ -52,12 +54,14 @@ func Probe(path string) (Meta, error) {
 	}
 
 	for _, s := range probe.Streams {
-		if s.Width > 0 {
+		if s.CodecType == "audio" {
+			meta.HasAudio = true
+		}
+		if s.CodecType == "video" && meta.Codec == "" {
 			meta.Width = s.Width
 			meta.Height = s.Height
 			meta.Codec = s.CodecName
 			meta.FrameRate = parseFrameRate(s.RFrameRate)
-			break
 		}
 	}
 

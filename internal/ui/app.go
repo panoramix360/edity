@@ -23,8 +23,8 @@ var (
 	activeBorderColor = lipgloss.Color("10")
 
 	defaultPaneStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(borderColor)
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(borderColor)
 
 	activePaneStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -74,21 +74,35 @@ type Model struct {
 	playheadPos float64
 	width       int
 	height      int
+
+	modal ExportModal
 }
 
 func New(clips []clip.Clip) Model {
-	return Model{clips: clips}
+	return Model{
+		clips: clips,
+		modal: newExportModal(),
+	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.modal.Init()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if wm, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = wm.Width
+		m.height = wm.Height
+		return m, nil
+	}
+
+	if m.modal.IsActive() {
+		var cmd tea.Cmd
+		m.modal, cmd = m.modal.Update(msg)
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -153,9 +167,49 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusedPane == PaneTimeline {
 				m = m.deleteSelected()
 			}
+		case "e":
+			if len(m.clips) > 0 {
+				m.modal = m.modal.Open(m.clips, m.timelineTotal())
+			}
 		}
 	}
 	return m, nil
+}
+
+func (m Model) View() tea.View {
+	if m.width == 0 {
+		return tea.NewView("")
+	}
+	var content string
+	if m.modal.IsActive() {
+		content = m.modal.Render(m.width, m.height)
+	} else {
+		content = m.renderMainView()
+	}
+	v := tea.NewView(content)
+	v.AltScreen = true
+	v.Cursor = m.modal.Cursor(m.width, m.height)
+	return v
+}
+
+func (m Model) renderMainView() string {
+	paneNames := []string{"Media Bin", "Preview", "Timeline"}
+	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
+	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   ,/. frame   s split   d delete   e export   " + activeLabel)
+	statusHeight := 1
+
+	topHeight := (m.height - statusHeight) * 2 / 3
+	bottomHeight := m.height - topHeight - statusHeight
+
+	leftWidth := m.width / 3
+	rightWidth := m.width - leftWidth
+
+	mediaBin := m.renderMediaBin(leftWidth, topHeight)
+	preview := m.renderPreview(rightWidth, topHeight)
+	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
+	timeline := m.renderTimeline(m.width, bottomHeight)
+
+	return lipgloss.JoinVertical(lipgloss.Left, top, timeline, statusBar)
 }
 
 func (m Model) timelineTotal() float64 {
@@ -306,34 +360,6 @@ func (m Model) headerFor(p Pane, label string) string {
 		return activeHeaderStyle.Render(label)
 	}
 	return headerStyle.Render(label)
-}
-
-func (m Model) View() tea.View {
-	if m.width == 0 {
-		return tea.NewView("")
-	}
-
-	paneNames := []string{"Media Bin", "Preview", "Timeline"}
-	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
-	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   ,/. frame   s split   d delete   " + activeLabel)
-	statusHeight := 1
-
-	topHeight := (m.height - statusHeight) * 2 / 3
-	bottomHeight := m.height - topHeight - statusHeight
-
-	leftWidth := m.width / 3
-	rightWidth := m.width - leftWidth
-
-	mediaBin := m.renderMediaBin(leftWidth, topHeight)
-	preview := m.renderPreview(rightWidth, topHeight)
-	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
-
-	timeline := m.renderTimeline(m.width, bottomHeight)
-
-	content := lipgloss.JoinVertical(lipgloss.Left, top, timeline, statusBar)
-	v := tea.NewView(content)
-	v.AltScreen = true
-	return v
 }
 
 func (m Model) renderMediaBin(width, height int) string {
