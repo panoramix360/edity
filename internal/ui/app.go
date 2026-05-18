@@ -402,7 +402,7 @@ func (m Model) renderPreview(width, height int) string {
 		dimStyle.Render("  Video      " + formatRes(c.Meta.Width, c.Meta.Height) + "  " + fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
 		dimStyle.Render("  Codec      " + c.Meta.Codec),
 		"",
-		dimStyle.Render("  Playback coming in v0.3"),
+		dimStyle.Render("  Playback coming in v0.4"),
 	}
 	return m.paneStyle(PanePreview).Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
