@@ -44,10 +44,10 @@ func Export(clips []clip.Clip, outputPath string, totalDuration float64, onProgr
 		targetFPS = 30
 	}
 
-	withAudio := true
+	withAudio := false
 	for _, c := range clips {
-		if !c.Meta.HasAudio {
-			withAudio = false
+		if c.Meta.HasAudio {
+			withAudio = true
 			break
 		}
 	}
@@ -108,31 +108,38 @@ func buildArgs(clips []clip.Clip, outputPath string, w, h int, fps float64, with
 	}
 
 	var filters []string
-	var concatInputs string
+	var concatInputs strings.Builder
 	n := len(clips)
 
-	for i := range clips {
+	for i, c := range clips {
 		vOut := fmt.Sprintf("[v%d]", i)
 		filters = append(filters, fmt.Sprintf(
 			"[%d:v]scale=%d:%d:force_original_aspect_ratio=decrease:flags=lanczos,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,fps=%.3f,setsar=1%s",
 			i, w, h, w, h, fps, vOut,
 		))
-		concatInputs += vOut
+		concatInputs.WriteString(vOut)
 
 		if withAudio {
 			aOut := fmt.Sprintf("[a%d]", i)
-			filters = append(filters, fmt.Sprintf("[%d:a]aresample=44100%s", i, aOut))
-			concatInputs += aOut
+			if c.Meta.HasAudio {
+				filters = append(filters, fmt.Sprintf("[%d:a]aresample=48000%s", i, aOut))
+			} else {
+				filters = append(filters, fmt.Sprintf(
+					"anullsrc=r=48000:cl=stereo,atrim=duration=%.6f,aresample=48000%s",
+					c.Duration(), aOut,
+				))
+			}
+			concatInputs.WriteString(aOut)
 		}
 	}
 
 	if withAudio {
 		filters = append(filters, fmt.Sprintf(
-			"%sconcat=n=%d:v=1:a=1[outv][outa]", concatInputs, n,
+			"%sconcat=n=%d:v=1:a=1[outv][outa]", concatInputs.String(), n,
 		))
 	} else {
 		filters = append(filters, fmt.Sprintf(
-			"%sconcat=n=%d:v=1:a=0[outv]", concatInputs, n,
+			"%sconcat=n=%d:v=1:a=0[outv]", concatInputs.String(), n,
 		))
 	}
 
