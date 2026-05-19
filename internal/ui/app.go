@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -17,6 +18,8 @@ const (
 	PanePreview
 	PaneTimeline
 )
+
+const epsilon = 0.001
 
 var (
 	borderColor       = lipgloss.Color("8")
@@ -257,11 +260,7 @@ func (m Model) splitAtPlayhead() Model {
 	right := orig
 	right.InPoint = orig.InPoint + offset
 
-	newClips := make([]clip.Clip, 0, len(m.clips)+1)
-	newClips = append(newClips, m.clips[:idx]...)
-	newClips = append(newClips, left, right)
-	newClips = append(newClips, m.clips[idx+1:]...)
-	m.clips = newClips
+	m.clips = slices.Replace(m.clips, idx, idx+1, left, right)
 	return m
 }
 
@@ -269,10 +268,7 @@ func (m Model) deleteSelected() Model {
 	if len(m.clips) == 0 {
 		return m
 	}
-	newClips := make([]clip.Clip, 0, len(m.clips)-1)
-	newClips = append(newClips, m.clips[:m.selected]...)
-	newClips = append(newClips, m.clips[m.selected+1:]...)
-	m.clips = newClips
+	m.clips = slices.Delete(m.clips, m.selected, m.selected+1)
 	if len(m.clips) == 0 {
 		m.selected = 0
 		m.playheadPos = 0
@@ -291,7 +287,7 @@ func (m Model) deleteSelected() Model {
 
 func (m Model) nextBoundary() float64 {
 	for _, b := range m.clipBoundaries() {
-		if b > m.playheadPos+0.01 {
+		if b > m.playheadPos+epsilon {
 			return b
 		}
 	}
@@ -301,7 +297,7 @@ func (m Model) nextBoundary() float64 {
 func (m Model) prevBoundary() float64 {
 	boundaries := m.clipBoundaries()
 	for i := len(boundaries) - 1; i >= 0; i-- {
-		if boundaries[i] < m.playheadPos-0.01 {
+		if boundaries[i] < m.playheadPos-epsilon {
 			return boundaries[i]
 		}
 	}
@@ -442,7 +438,7 @@ func (m Model) renderTimeline(width, height int) string {
 				remaining -= w
 			}
 			label := truncate(filepath.Base(c.Path), w)
-			runes := []rune(label + strings.Repeat(" ", w-len([]rune(label))))
+			runes := []rune(label + strings.Repeat(" ", max(0, w-lipgloss.Width(label))))
 
 			barStyle := normalBarStyle
 			if i == m.selected {
