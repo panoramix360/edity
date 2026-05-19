@@ -162,12 +162,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case ",":
 			if m.focusedPane == PaneTimeline {
-				m.playheadPos = max(0, m.playheadPos-m.frameStep())
+				m.playheadPos = m.prevFrame()
 				m.selected, _ = m.clipAtPlayhead()
 			}
 		case ".":
 			if m.focusedPane == PaneTimeline {
-				m.playheadPos = min(m.timelineTotal(), m.playheadPos+m.frameStep())
+				m.playheadPos = m.nextFrame()
 				m.selected, _ = m.clipAtPlayhead()
 			}
 		case "d", "backspace":
@@ -308,16 +308,28 @@ func (m Model) prevBoundary() float64 {
 	return 0
 }
 
-func (m Model) frameStep() float64 {
+func (m Model) currentFPS() float64 {
 	if len(m.clips) == 0 {
-		return 1.0 / defaultFPS
+		return defaultFPS
 	}
 	idx, _ := m.clipAtPlayhead()
 	fps := m.clips[idx].Meta.FrameRate
 	if fps <= 0 {
-		return 1.0 / defaultFPS
+		return defaultFPS
 	}
-	return 1.0 / fps
+	return fps
+}
+
+func (m Model) prevFrame() float64 {
+	fps := m.currentFPS()
+	frame := math.Round(m.playheadPos * fps)
+	return max(0, (frame-1)/fps)
+}
+
+func (m Model) nextFrame() float64 {
+	fps := m.currentFPS()
+	frame := math.Round(m.playheadPos * fps)
+	return min(m.timelineTotal(), (frame+1)/fps)
 }
 
 func (m Model) renderRuler(innerW int, total float64) string {
