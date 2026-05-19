@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -19,7 +20,10 @@ const (
 	PaneTimeline
 )
 
-const epsilon = 0.001
+const (
+	epsilon    = 0.001
+	defaultFPS = 30.0
+)
 
 var (
 	borderColor       = lipgloss.Color("8")
@@ -306,12 +310,12 @@ func (m Model) prevBoundary() float64 {
 
 func (m Model) frameStep() float64 {
 	if len(m.clips) == 0 {
-		return 1.0 / 30
+		return 1.0 / defaultFPS
 	}
 	idx, _ := m.clipAtPlayhead()
 	fps := m.clips[idx].Meta.FrameRate
 	if fps <= 0 {
-		return 1.0 / 30
+		return 1.0 / defaultFPS
 	}
 	return 1.0 / fps
 }
@@ -471,7 +475,7 @@ func (m Model) renderTimeline(width, height int) string {
 			c.Meta.FrameRate,
 		)
 		lines = append(lines, dimStyle.Render(info))
-		lines = append(lines, dimStyle.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(m.playheadPos))))
+		lines = append(lines, dimStyle.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(m.playheadPos, c.Meta.FrameRate))))
 	}
 
 	return m.paneStyle(PaneTimeline).Width(width).Height(height).Render(strings.Join(lines, "\n"))
@@ -497,10 +501,22 @@ func formatDuration(secs float64) string {
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
 
-func formatPlayhead(secs float64) string {
-	h, m, s := decomposeSecs(secs)
-	cs := int(secs*100) % 100
-	return fmt.Sprintf("%02d:%02d:%02d.%02d", h, m, s, cs)
+func formatPlayhead(secs, fps float64) string {
+	if fps <= 0 {
+		fps = defaultFPS
+	}
+	fpsInt := int(math.Round(fps))
+	totalFrames := int(math.Round(secs * fps))
+	ff := totalFrames % fpsInt
+	totalSecs := totalFrames / fpsInt
+	s := totalSecs % 60
+	m := (totalSecs / 60) % 60
+	h := totalSecs / 3600
+	frameWidth := 2
+	if fpsInt >= 100 {
+		frameWidth = 3
+	}
+	return fmt.Sprintf("%02d:%02d:%02d:%0*d", h, m, s, frameWidth, ff)
 }
 
 func formatRes(w, h int) string {
