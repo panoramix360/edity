@@ -1,12 +1,12 @@
 package ui
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -66,6 +66,7 @@ type ExportModal struct {
 	stage    exportStage
 	input    textinput.Model
 	progress progress.Model
+	spinner  spinner.Model
 	output   string
 	errMsg   string
 	ch       chan float64
@@ -108,6 +109,10 @@ func (m ExportModal) Update(msg tea.Msg) (ExportModal, tea.Cmd) {
 		var cmd tea.Cmd
 		m.progress, cmd = m.progress.Update(msg)
 		return m, cmd
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	case exportDoneMsg:
 		if msg.err != nil {
 			m.stage = exportFailed
@@ -139,7 +144,8 @@ func (m ExportModal) Update(msg tea.Msg) (ExportModal, tea.Cmd) {
 				m.progress = progress.New(progress.WithDefaultBlend())
 				m.progress.SetWidth(modalContent)
 				m.ch = make(chan float64, 50)
-				return m, tea.Batch(tiCmd, m.runExportCmd(outputPath), listenProgress(m.ch))
+				m.spinner = spinner.New(spinner.WithSpinner(spinner.Dot))
+				return m, tea.Batch(tiCmd, m.runExportCmd(outputPath), listenProgress(m.ch), m.spinner.Tick)
 			}
 		case exportDone, exportFailed:
 			switch km.String() {
@@ -234,13 +240,12 @@ func (m ExportModal) inputBody() string {
 }
 
 func (m ExportModal) runningBody() string {
-	pct := fmt.Sprintf("%.0f%%", m.progress.Percent()*100)
 	return lipgloss.JoinVertical(lipgloss.Left,
 		modalTitleStyle.Render("Exporting..."),
 		"",
 		m.progress.View(),
 		"",
-		modalHintStyle.Render("Progress: "+pct),
+		modalHintStyle.Render(m.spinner.View()+" Exporting"),
 	)
 }
 
