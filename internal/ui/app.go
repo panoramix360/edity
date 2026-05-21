@@ -45,10 +45,6 @@ var (
 				Foreground(activeBorderColor).
 				Bold(true)
 
-	selectedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("10")).
-			Bold(true)
-
 	dimStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("8"))
 
@@ -75,19 +71,23 @@ var (
 )
 
 type Model struct {
-	clips       []clip.Clip
-	selected    int
-	focusedPane Pane
-	playheadPos float64
-	width       int
-	height      int
-
-	modal ExportModal
+	clips                []clip.Clip
+	selected             int
+	focusedPane          Pane
+	playheadPos          float64
+	width                int
+	height               int
+	binW, binH           int
+	previewW, previewH   int
+	timelineW, timelineH int
+	bin                  MediaBin
+	modal                ExportModal
 }
 
 func New(clips []clip.Clip) Model {
 	return Model{
 		clips: clips,
+		bin:   newMediaBin(clips),
 		modal: newExportModal(),
 	}
 }
@@ -100,6 +100,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if wm, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width = wm.Width
 		m.height = wm.Height
+
+		statusH := 1
+
+		m.binW = m.width / 3
+		m.binH = (m.height - statusH) * 2 / 3
+
+		m.timelineW = m.width
+		m.timelineH = m.height - m.binH - statusH
+
+		m.previewW = m.width - m.binW
+		m.previewH = m.binH
+
+		m.bin = m.bin.SetSize(m.binW-2, m.binH-2)
 		return m, nil
 	}
 
@@ -109,77 +122,115 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
+	km, isKeyPress := msg.(tea.KeyPressMsg)
+
+	if isKeyPress {
+		switch km.String() {
+		case "ctrl+c":
 			return m, tea.Quit
 		case "tab":
 			m.focusedPane = (m.focusedPane + 1) % 3
+			return m, nil
 		case "shift+tab":
 			m.focusedPane = (m.focusedPane + 2) % 3
-		case "up", "k":
-			if m.focusedPane == PaneMediaBin && m.selected > 0 {
-				m.selected--
+			return m, nil
+		}
+	}
+
+	switch m.focusedPane {
+	case PaneMediaBin:
+		if isKeyPress {
+			switch km.String() {
+			case "q":
+				if !m.bin.IsFiltering() {
+					return m, tea.Quit
+				}
+			case "e":
+				if !m.bin.IsFiltering() {
+					return m.openExportModal()
+				}
 			}
-		case "down", "j":
-			if m.focusedPane == PaneMediaBin && m.selected < len(m.clips)-1 {
-				m.selected++
-			}
+		}
+		var cmd tea.Cmd
+		m.bin, cmd = m.bin.Update(msg)
+		m.selected = m.bin.GlobalIndex()
+		return m, cmd
+
+	default:
+		if !isKeyPress {
+			return m, nil
+		}
+		switch km.String() {
+		case "q":
+			return m, tea.Quit
+		case "e":
+			return m.openExportModal()
 		case "left", "h":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = max(0, m.playheadPos-1)
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "right", "l":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = min(m.timelineTotal(), m.playheadPos+1)
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "shift+left":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = max(0, m.playheadPos-5)
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "shift+right":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = min(m.timelineTotal(), m.playheadPos+5)
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "[":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.prevBoundary()
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "]":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.nextBoundary()
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "s":
 			if m.focusedPane == PaneTimeline {
-				m = m.splitAtPlayhead()
+				return m.splitAtPlayhead()
 			}
 		case ",":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.prevFrame()
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case ".":
 			if m.focusedPane == PaneTimeline {
 				m.playheadPos = m.nextFrame()
 				m.selected, _ = m.clipAtPlayhead()
+				m.bin = m.bin.Select(m.selected)
 			}
 		case "d", "backspace":
 			if m.focusedPane == PaneTimeline {
-				m = m.deleteSelected()
-			}
-		case "e":
-			if len(m.clips) > 0 {
-				m.modal = m.modal.Open(m.clips, m.timelineTotal())
+				return m.deleteSelected()
 			}
 		}
 	}
+	return m, nil
+}
+
+func (m Model) openExportModal() (Model, tea.Cmd) {
+	if len(m.clips) == 0 {
+		return m, nil
+	}
+	m.modal = m.modal.Open(m.clips, m.timelineTotal())
 	return m, nil
 }
 
@@ -203,18 +254,10 @@ func (m Model) renderMainView() string {
 	paneNames := []string{"Media Bin", "Preview", "Timeline"}
 	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
 	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   ,/. frame   s split   d delete   e export   " + activeLabel)
-	statusHeight := 1
-
-	topHeight := (m.height - statusHeight) * 2 / 3
-	bottomHeight := m.height - topHeight - statusHeight
-
-	leftWidth := m.width / 3
-	rightWidth := m.width - leftWidth
-
-	mediaBin := m.renderMediaBin(leftWidth, topHeight)
-	preview := m.renderPreview(rightWidth, topHeight)
+	mediaBin := m.bin.Render(m.binW, m.binH, m.focusedPane == PaneMediaBin)
+	preview := m.renderPreview(m.previewW, m.previewH)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
-	timeline := m.renderTimeline(m.width, bottomHeight)
+	timeline := m.renderTimeline(m.timelineW, m.timelineH)
 
 	return lipgloss.JoinVertical(lipgloss.Left, top, timeline, statusBar)
 }
@@ -250,13 +293,13 @@ func (m Model) clipAtPlayhead() (idx int, offsetInClip float64) {
 	return 0, 0
 }
 
-func (m Model) splitAtPlayhead() Model {
+func (m Model) splitAtPlayhead() (Model, tea.Cmd) {
 	if len(m.clips) == 0 {
-		return m
+		return m, nil
 	}
 	idx, offset := m.clipAtPlayhead()
 	if offset <= 0 || offset >= m.clips[idx].Duration() {
-		return m
+		return m, nil
 	}
 	orig := m.clips[idx]
 	left := orig
@@ -265,18 +308,22 @@ func (m Model) splitAtPlayhead() Model {
 	right.InPoint = orig.InPoint + offset
 
 	m.clips = slices.Replace(m.clips, idx, idx+1, left, right)
-	return m
+	var cmd tea.Cmd
+	m.bin, cmd = m.bin.SetClips(m.clips)
+	return m, cmd
 }
 
-func (m Model) deleteSelected() Model {
+func (m Model) deleteSelected() (Model, tea.Cmd) {
 	if len(m.clips) == 0 {
-		return m
+		return m, nil
 	}
 	m.clips = slices.Delete(m.clips, m.selected, m.selected+1)
 	if len(m.clips) == 0 {
 		m.selected = 0
 		m.playheadPos = 0
-		return m
+		var cmd tea.Cmd
+		m.bin, cmd = m.bin.SetClips(m.clips)
+		return m, cmd
 	}
 	if m.selected >= len(m.clips) {
 		m.selected = len(m.clips) - 1
@@ -286,7 +333,10 @@ func (m Model) deleteSelected() Model {
 		newStart += m.clips[i].Duration()
 	}
 	m.playheadPos = newStart
-	return m
+	var cmd tea.Cmd
+	m.bin, cmd = m.bin.SetClips(m.clips)
+	m.bin = m.bin.Select(m.selected)
+	return m, cmd
 }
 
 func (m Model) nextBoundary() float64 {
@@ -372,32 +422,6 @@ func (m Model) headerFor(p Pane, label string) string {
 		return activeHeaderStyle.Render(label)
 	}
 	return headerStyle.Render(label)
-}
-
-func (m Model) renderMediaBin(width, height int) string {
-	inner := width - 2
-	var lines []string
-	lines = append(lines, m.headerFor(PaneMediaBin, "Media Bin"))
-	lines = append(lines, "")
-
-	for i, c := range m.clips {
-		name := filepath.Base(c.Path)
-		dur := formatDuration(c.Duration())
-		res := formatRes(c.Meta.Width, c.Meta.Height)
-		fps := fmt.Sprintf("%.2ffps", c.Meta.FrameRate)
-
-		nameLine := truncate(name, inner-7) + "  " + dimStyle.Render(dur)
-		metaLine := dimStyle.Render("  " + res + " " + fps)
-
-		if i == m.selected {
-			lines = append(lines, selectedStyle.Render("> "+nameLine))
-		} else {
-			lines = append(lines, "  "+nameLine)
-		}
-		lines = append(lines, metaLine)
-	}
-
-	return m.paneStyle(PaneMediaBin).Width(width).Height(height).Render(strings.Join(lines, "\n"))
 }
 
 func (m Model) renderPreview(width, height int) string {
