@@ -31,11 +31,6 @@ func (t Timeline) SetSize(w, h int) Timeline {
 	return t
 }
 
-func (t Timeline) SetClips(clips []clip.Clip) Timeline {
-	t.clips = clips
-	return t
-}
-
 
 func (t Timeline) Select(i int) Timeline {
 	t.selected = i
@@ -44,10 +39,6 @@ func (t Timeline) Select(i int) Timeline {
 
 func (t Timeline) Clips() []clip.Clip {
 	return t.clips
-}
-
-func (t Timeline) Playhead() float64 {
-	return t.playheadPos
 }
 
 func (t Timeline) Selected() int {

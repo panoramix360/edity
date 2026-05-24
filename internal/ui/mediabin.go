@@ -34,10 +34,6 @@ func newMediaBin(clips []clip.Clip) MediaBin {
 	return MediaBin{list: newBinList(clips)}
 }
 
-func (b MediaBin) Init() tea.Cmd {
-	return nil
-}
-
 func (b MediaBin) Update(msg tea.Msg) (MediaBin, tea.Cmd) {
 	var cmd tea.Cmd
 	b.list, cmd = b.list.Update(msg)
