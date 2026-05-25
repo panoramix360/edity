@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
@@ -44,21 +43,22 @@ func (p Preview) Render(clips []clip.Clip, selected int, focused bool) string {
 
 	header := headerS.Render("Preview")
 
-	if len(clips) == 0 || selected < 0 || selected >= len(clips) {
-		return paneStyle.Width(p.width).Height(p.height).Render(lipgloss.JoinVertical(lipgloss.Left, header))
+	var lines []string
+	lines = append(lines, header)
+
+	if len(clips) > 0 && selected >= 0 && selected < len(clips) {
+		c := clips[selected]
+		lines = append(lines,
+			"",
+			"  "+filepath.Base(c.Path),
+			"",
+			dimStyle.Render("  Duration   "+formatDuration(c.Duration())),
+			dimStyle.Render("  Video      "+formatRes(c.Meta.Width, c.Meta.Height)+"  "+fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
+			dimStyle.Render("  Codec      "+c.Meta.Codec),
+			"",
+			dimStyle.Render("  Playback coming in v0.4"),
+		)
 	}
 
-	c := clips[selected]
-	lines := []string{
-		header,
-		"",
-		"  " + filepath.Base(c.Path),
-		"",
-		dimStyle.Render("  Duration   " + formatDuration(c.Duration())),
-		dimStyle.Render("  Video      " + formatRes(c.Meta.Width, c.Meta.Height) + "  " + fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
-		dimStyle.Render("  Codec      " + c.Meta.Codec),
-		"",
-		dimStyle.Render("  Playback coming in v0.4"),
-	}
-	return paneStyle.Width(p.width).Height(p.height).Render(strings.Join(lines, "\n"))
+	return paneStyle.Width(p.width).Height(p.height).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }

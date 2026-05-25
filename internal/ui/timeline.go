@@ -164,7 +164,7 @@ func (t Timeline) Render(focused bool) string {
 		lines = append(lines, dimStyle.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(t.playheadPos, c.Meta.FrameRate))))
 	}
 
-	return paneStyle.Width(t.width).Height(t.height).Render(strings.Join(lines, "\n"))
+	return paneStyle.Width(t.width).Height(t.height).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
 
 func (t Timeline) timelineTotal() float64 {
