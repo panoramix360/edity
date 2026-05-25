@@ -280,6 +280,19 @@ func (t Timeline) nextFrame() float64 {
 	return min(t.timelineTotal(), (frame+1)/fps)
 }
 
+func (t Timeline) ShortHelp() []key.Binding {
+	return []key.Binding{Keys.PlayheadLeft, Keys.PlayheadRight, Keys.Split, Keys.Delete, Keys.Export, Keys.Help}
+}
+
+func (t Timeline) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane, Keys.Export},
+		{Keys.PlayheadLeft, Keys.PlayheadRight, Keys.FastLeft, Keys.FastRight},
+		{Keys.PrevBoundary, Keys.NextBoundary, Keys.PrevFrame, Keys.NextFrame},
+		{Keys.Split, Keys.Delete},
+	}
+}
+
 func (t Timeline) renderRuler(innerW int, total float64) string {
 	buf := []rune(strings.Repeat(" ", innerW))
 	interval := rulerInterval(total, innerW)

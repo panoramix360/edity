@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
 	"github.com/panoramix360/edity/internal/clip"
 )
@@ -15,6 +16,16 @@ type Preview struct {
 
 func newPreview() Preview {
 	return Preview{}
+}
+
+func (p Preview) ShortHelp() []key.Binding {
+	return []key.Binding{Keys.Quit, Keys.NextPane, Keys.PrevPane, Keys.Help}
+}
+
+func (p Preview) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane},
+	}
 }
 
 func (p Preview) SetSize(w, h int) Preview {

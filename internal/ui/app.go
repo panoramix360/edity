@@ -181,6 +181,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) activeKeyMap() help.KeyMap {
+	switch m.focusedPane {
+	case PaneMediaBin:
+		return m.bin
+	case PaneTimeline:
+		return m.timeline
+	default:
+		return m.preview
+	}
+}
+
 func (m Model) openExportModal() (Model, tea.Cmd) {
 	if len(m.clips) == 0 {
 		return m, nil
@@ -210,7 +221,7 @@ func (m Model) renderMainView() string {
 	preview := m.preview.Render(m.clips, m.selected, m.focusedPane == PanePreview)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
 	timeline := m.timeline.Render(m.focusedPane == PaneTimeline)
-	helpBar := lipgloss.NewStyle().PaddingLeft(1).Render(m.help.View(Keys))
+	helpBar := lipgloss.NewStyle().PaddingLeft(1).Render(m.help.View(m.activeKeyMap()))
 
 	return lipgloss.JoinVertical(lipgloss.Left, top, timeline, helpBar)
 }

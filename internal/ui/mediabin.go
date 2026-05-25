@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -73,6 +74,17 @@ func (b MediaBin) GlobalIndex() int {
 
 func (b MediaBin) IsFiltering() bool {
 	return b.list.FilterState() == list.Filtering
+}
+
+func (b MediaBin) ShortHelp() []key.Binding {
+	return []key.Binding{Keys.Quit, Keys.NextPane, Keys.Up, Keys.Down, Keys.Export, Keys.Help}
+}
+
+func (b MediaBin) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane, Keys.Export},
+		{Keys.Up, Keys.Down},
+	}
 }
 
 func newBinList(clips []clip.Clip) list.Model {
