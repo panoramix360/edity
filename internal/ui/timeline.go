@@ -289,7 +289,7 @@ func (t Timeline) FullHelp() [][]key.Binding {
 		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane, Keys.Export},
 		{Keys.PlayheadLeft, Keys.PlayheadRight, Keys.FastLeft, Keys.FastRight},
 		{Keys.PrevBoundary, Keys.NextBoundary, Keys.PrevFrame, Keys.NextFrame},
-		{Keys.Split, Keys.Delete},
+		{Keys.Split, Keys.Delete, Keys.Help},
 	}
 }
 

@@ -24,7 +24,7 @@ func (p Preview) ShortHelp() []key.Binding {
 
 func (p Preview) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane},
+		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane, Keys.Help},
 	}
 }
 

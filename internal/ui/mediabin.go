@@ -83,7 +83,7 @@ func (b MediaBin) ShortHelp() []key.Binding {
 func (b MediaBin) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{Keys.Quit, Keys.ForceQuit, Keys.NextPane, Keys.PrevPane, Keys.Export},
-		{Keys.Up, Keys.Down},
+		{Keys.Up, Keys.Down, Keys.Help},
 	}
 }
 
@@ -113,7 +113,7 @@ func newBinList(clips []clip.Clip) list.Model {
 	list := list.New(clipsToItems(clips), d, 0, 0)
 	list.Title = "Media Bin"
 
-	list.SetShowHelp(true)
+	list.SetShowHelp(false)
 	list.SetShowStatusBar(false)
 	list.DisableQuitKeybindings()
 

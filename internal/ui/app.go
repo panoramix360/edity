@@ -59,7 +59,6 @@ var (
 				Background(lipgloss.Color("9")).
 				Foreground(lipgloss.Color("15")).
 				Bold(true)
-
 )
 
 type Model struct {
@@ -93,27 +92,33 @@ func (m Model) Init() tea.Cmd {
 	return m.modal.Init()
 }
 
+func (m Model) recalcLayout() Model {
+	if m.width == 0 {
+		return m
+	}
+	helpH := lipgloss.Height(m.help.View(m.activeKeyMap()))
+
+	m.binW = m.width / 3
+	m.binH = (m.height - helpH) * 2 / 3
+
+	m.timelineW = m.width
+	m.timelineH = m.height - m.binH - helpH
+
+	m.previewW = m.width - m.binW
+	m.previewH = m.binH
+
+	m.bin = m.bin.SetSize(m.binW-2, m.binH-2)
+	m.timeline = m.timeline.SetSize(m.timelineW, m.timelineH)
+	m.preview = m.preview.SetSize(m.previewW, m.previewH)
+	return m
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if wm, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width = wm.Width
 		m.height = wm.Height
-
-		statusH := 1
-
-		m.binW = m.width / 3
-		m.binH = (m.height - statusH) * 2 / 3
-
-		m.timelineW = m.width
-		m.timelineH = m.height - m.binH - statusH
-
-		m.previewW = m.width - m.binW
-		m.previewH = m.binH
-
-		m.bin = m.bin.SetSize(m.binW-2, m.binH-2)
-		m.timeline = m.timeline.SetSize(m.timelineW, m.timelineH)
-		m.preview = m.preview.SetSize(m.previewW, m.previewH)
 		m.help.SetWidth(m.width)
-		return m, nil
+		return m.recalcLayout(), nil
 	}
 
 	if m.modal.IsActive() {
@@ -130,13 +135,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case key.Matches(km, Keys.NextPane):
 			m.focusedPane = (m.focusedPane + 1) % 3
-			return m, nil
+			return m.recalcLayout(), nil
 		case key.Matches(km, Keys.PrevPane):
 			m.focusedPane = (m.focusedPane + 2) % 3
-			return m, nil
+			return m.recalcLayout(), nil
 		case key.Matches(km, Keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
-			return m, nil
+			return m.recalcLayout(), nil
 		}
 	}
 
