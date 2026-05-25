@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/panoramix360/edity/internal/clip"
@@ -58,13 +60,6 @@ var (
 				Foreground(lipgloss.Color("15")).
 				Bold(true)
 
-	statusStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8")).
-			PaddingLeft(1)
-
-	activePaneLabel = lipgloss.NewStyle().
-			Foreground(activeBorderColor).
-			Bold(true)
 )
 
 type Model struct {
@@ -80,6 +75,7 @@ type Model struct {
 	timeline             Timeline
 	preview              Preview
 	modal                ExportModal
+	help                 help.Model
 }
 
 func New(clips []clip.Clip) Model {
@@ -89,6 +85,7 @@ func New(clips []clip.Clip) Model {
 		timeline: newTimeline(clips),
 		preview:  newPreview(),
 		modal:    newExportModal(),
+		help:     help.New(),
 	}
 }
 
@@ -115,6 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bin = m.bin.SetSize(m.binW-2, m.binH-2)
 		m.timeline = m.timeline.SetSize(m.timelineW, m.timelineH)
 		m.preview = m.preview.SetSize(m.previewW, m.previewH)
+		m.help.SetWidth(m.width)
 		return m, nil
 	}
 
@@ -127,14 +125,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	km, isKeyPress := msg.(tea.KeyPressMsg)
 
 	if isKeyPress {
-		switch km.String() {
-		case "ctrl+c":
+		switch {
+		case key.Matches(km, Keys.ForceQuit):
 			return m, tea.Quit
-		case "tab":
+		case key.Matches(km, Keys.NextPane):
 			m.focusedPane = (m.focusedPane + 1) % 3
 			return m, nil
-		case "shift+tab":
+		case key.Matches(km, Keys.PrevPane):
 			m.focusedPane = (m.focusedPane + 2) % 3
+			return m, nil
+		case key.Matches(km, Keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
 		}
 	}
@@ -142,15 +143,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.focusedPane {
 	case PaneMediaBin:
 		if isKeyPress {
-			switch km.String() {
-			case "q":
-				if !m.bin.IsFiltering() {
-					return m, tea.Quit
-				}
-			case "e":
-				if !m.bin.IsFiltering() {
-					return m.openExportModal()
-				}
+			switch {
+			case key.Matches(km, Keys.Quit) && !m.bin.IsFiltering():
+				return m, tea.Quit
+			case key.Matches(km, Keys.Export) && !m.bin.IsFiltering():
+				return m.openExportModal()
 			}
 		}
 		var cmd tea.Cmd
@@ -161,10 +158,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PaneTimeline:
 		if isKeyPress {
-			switch km.String() {
-			case "q":
+			switch {
+			case key.Matches(km, Keys.Quit):
 				return m, tea.Quit
-			case "e":
+			case key.Matches(km, Keys.Export):
 				return m.openExportModal()
 			}
 		}
@@ -209,15 +206,13 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) renderMainView() string {
-	paneNames := []string{"Media Bin", "Preview", "Timeline"}
-	activeLabel := activePaneLabel.Render("[" + paneNames[m.focusedPane] + "]")
-	statusBar := statusStyle.Render("q quit   tab/shift+tab focus   ↑↓/jk navigate   ←→/hl playhead   shift+←→ fast   [/] boundaries   ,/. frame   s split   d delete   e export   " + activeLabel)
 	mediaBin := m.bin.Render(m.binW, m.binH, m.focusedPane == PaneMediaBin)
 	preview := m.preview.Render(m.clips, m.selected, m.focusedPane == PanePreview)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
 	timeline := m.timeline.Render(m.focusedPane == PaneTimeline)
+	helpBar := lipgloss.NewStyle().PaddingLeft(1).Render(m.help.View(Keys))
 
-	return lipgloss.JoinVertical(lipgloss.Left, top, timeline, statusBar)
+	return lipgloss.JoinVertical(lipgloss.Left, top, timeline, helpBar)
 }
 
 func decomposeSecs(secs float64) (h, m, s int) {

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/panoramix360/edity/internal/clip"
@@ -51,34 +52,34 @@ func (t Timeline) Update(msg tea.Msg) (Timeline, tea.Cmd) {
 		return t, nil
 	}
 
-	switch km.String() {
-	case "left", "h":
+	switch {
+	case key.Matches(km, Keys.PlayheadLeft):
 		t.playheadPos = max(0, t.playheadPos-1)
 		t.selected, _ = t.clipAtPlayhead()
-	case "right", "l":
+	case key.Matches(km, Keys.PlayheadRight):
 		t.playheadPos = min(t.timelineTotal(), t.playheadPos+1)
 		t.selected, _ = t.clipAtPlayhead()
-	case "shift+left":
+	case key.Matches(km, Keys.FastLeft):
 		t.playheadPos = max(0, t.playheadPos-5)
 		t.selected, _ = t.clipAtPlayhead()
-	case "shift+right":
+	case key.Matches(km, Keys.FastRight):
 		t.playheadPos = min(t.timelineTotal(), t.playheadPos+5)
 		t.selected, _ = t.clipAtPlayhead()
-	case "[":
+	case key.Matches(km, Keys.PrevBoundary):
 		t.playheadPos = t.prevBoundary()
 		t.selected, _ = t.clipAtPlayhead()
-	case "]":
+	case key.Matches(km, Keys.NextBoundary):
 		t.playheadPos = t.nextBoundary()
 		t.selected, _ = t.clipAtPlayhead()
-	case "s":
+	case key.Matches(km, Keys.Split):
 		return t.splitAtPlayhead()
-	case ",":
+	case key.Matches(km, Keys.PrevFrame):
 		t.playheadPos = t.prevFrame()
 		t.selected, _ = t.clipAtPlayhead()
-	case ".":
+	case key.Matches(km, Keys.NextFrame):
 		t.playheadPos = t.nextFrame()
 		t.selected, _ = t.clipAtPlayhead()
-	case "d", "backspace":
+	case key.Matches(km, Keys.Delete):
 		return t.deleteSelected()
 	}
 
