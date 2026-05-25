@@ -24,42 +24,6 @@ const (
 	defaultFPS = 30.0
 )
 
-var (
-	borderColor       = lipgloss.Color("8")
-	activeBorderColor = lipgloss.Color("10")
-
-	defaultPaneStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(borderColor)
-
-	activePaneStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(activeBorderColor)
-
-	headerStyle = lipgloss.NewStyle().
-			Foreground(borderColor).
-			Bold(true)
-
-	activeHeaderStyle = lipgloss.NewStyle().
-				Foreground(activeBorderColor).
-				Bold(true)
-
-	dimStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8"))
-
-	selectedBarStyle = lipgloss.NewStyle().
-				Background(lipgloss.Color("10")).
-				Foreground(lipgloss.Color("0"))
-
-	normalBarStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Foreground(lipgloss.Color("15"))
-
-	playheadCursorStyle = lipgloss.NewStyle().
-				Background(lipgloss.Color("9")).
-				Foreground(lipgloss.Color("15")).
-				Bold(true)
-)
 
 type Model struct {
 	clips                []clip.Clip

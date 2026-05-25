@@ -87,11 +87,11 @@ func (t Timeline) Update(msg tea.Msg) (Timeline, tea.Cmd) {
 }
 
 func (t Timeline) Render(focused bool) string {
-	paneStyle := defaultPaneStyle
-	headerS := headerStyle
+	paneStyle := theme.Pane.Default
+	headerS := theme.Pane.Header
 	if focused {
-		paneStyle = activePaneStyle
-		headerS = activeHeaderStyle
+		paneStyle = theme.Pane.Active
+		headerS = theme.Pane.ActiveHeader
 	}
 
 	innerW := t.width - 2
@@ -100,7 +100,7 @@ func (t Timeline) Render(focused bool) string {
 	lines = append(lines, "")
 
 	if len(t.clips) == 0 {
-		lines = append(lines, dimStyle.Render("  No clips loaded"))
+		lines = append(lines, theme.Dim.Render("  No clips loaded"))
 	} else {
 		total := t.timelineTotal()
 
@@ -113,7 +113,7 @@ func (t Timeline) Render(focused bool) string {
 				playheadCol = innerW - 1
 			}
 		}
-		playheadRow := strings.Repeat(" ", playheadCol) + lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render("▼")
+		playheadRow := strings.Repeat(" ", playheadCol) + theme.Timeline.PlayheadArrow.Render("▼")
 		lines = append(lines, playheadRow)
 
 		var sb strings.Builder
@@ -130,9 +130,9 @@ func (t Timeline) Render(focused bool) string {
 			label := truncate(filepath.Base(c.Path), w)
 			runes := []rune(label + strings.Repeat(" ", max(0, w-lipgloss.Width(label))))
 
-			barStyle := normalBarStyle
+			barStyle := theme.Timeline.Bar
 			if i == t.selected {
-				barStyle = selectedBarStyle
+				barStyle = theme.Timeline.SelectedBar
 			}
 
 			localCol := playheadCol - colStart
@@ -140,7 +140,7 @@ func (t Timeline) Render(focused bool) string {
 				if localCol > 0 {
 					sb.WriteString(barStyle.Render(string(runes[:localCol])))
 				}
-				sb.WriteString(playheadCursorStyle.Render(string(runes[localCol : localCol+1])))
+				sb.WriteString(theme.Timeline.PlayheadCursor.Render(string(runes[localCol : localCol+1])))
 				if localCol+1 < w {
 					sb.WriteString(barStyle.Render(string(runes[localCol+1:])))
 				}
@@ -160,8 +160,8 @@ func (t Timeline) Render(focused bool) string {
 			formatRes(c.Meta.Width, c.Meta.Height),
 			c.Meta.FrameRate,
 		)
-		lines = append(lines, dimStyle.Render(info))
-		lines = append(lines, dimStyle.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(t.playheadPos, c.Meta.FrameRate))))
+		lines = append(lines, theme.Dim.Render(info))
+		lines = append(lines, theme.Dim.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(t.playheadPos, c.Meta.FrameRate))))
 	}
 
 	return paneStyle.Width(t.width).Height(t.height).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
@@ -307,7 +307,7 @@ func (t Timeline) renderRuler(innerW int, total float64) string {
 			}
 		}
 	}
-	return dimStyle.Render(string(buf))
+	return theme.Dim.Render(string(buf))
 }
 
 func rulerInterval(total float64, width int) float64 {

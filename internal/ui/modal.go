@@ -35,32 +35,6 @@ const (
 	modalContent = modalW - 8
 )
 
-var (
-	modalStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("12")).
-			Padding(1, 3)
-
-	modalTitleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("12")).
-			Bold(true)
-
-	modalHintStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8"))
-
-	modalSuccessStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("10")).
-				Bold(true)
-
-	modalErrorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("9")).
-			Bold(true)
-
-	keyChipStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("0")).
-			Background(lipgloss.Color("12")).
-			Padding(0, 1)
-)
 
 type ExportModal struct {
 	stage    exportStage
@@ -170,7 +144,7 @@ func (m ExportModal) Render(termW, termH int) string {
 	case exportFailed:
 		body = m.failedBody()
 	}
-	modal := modalStyle.Width(modalW).Render(body)
+	modal := theme.Modal.Container.Width(modalW).Render(body)
 	return lipgloss.Place(termW, termH, lipgloss.Center, lipgloss.Center, modal)
 }
 
@@ -178,7 +152,7 @@ func (m ExportModal) Cursor(termW, termH int) *tea.Cursor {
 	if m.stage != exportInput {
 		return nil
 	}
-	modal := modalStyle.Width(modalW).Render(m.inputBody())
+	modal := theme.Modal.Container.Width(modalW).Render(m.inputBody())
 	fgH := lipgloss.Height(modal)
 	fgW := lipgloss.Width(modal)
 	startY := max((termH-fgH)/2, 0)
@@ -224,16 +198,16 @@ func listenProgress(ch chan float64) tea.Cmd {
 func (m ExportModal) inputBody() string {
 	cwd, _ := os.Getwd()
 	hints := lipgloss.JoinHorizontal(lipgloss.Left,
-		keyChipStyle.Render("enter"), modalHintStyle.Render(" Confirm   "),
-		keyChipStyle.Render("esc"), modalHintStyle.Render(" Cancel"),
+		theme.Modal.KeyChip.Render("enter"), theme.Modal.Hint.Render(" Confirm   "),
+		theme.Modal.KeyChip.Render("esc"), theme.Modal.Hint.Render(" Cancel"),
 	)
 	return lipgloss.JoinVertical(lipgloss.Left,
-		modalTitleStyle.Render("Export"),
+		theme.Modal.Title.Render("Export"),
 		"",
 		"Output filename:",
 		lipgloss.NewStyle().Width(modalContent).Render(m.input.View()),
 		"",
-		modalHintStyle.Render("Directory: "+truncate(cwd, modalContent)),
+		theme.Modal.Hint.Render("Directory: "+truncate(cwd, modalContent)),
 		"",
 		hints,
 	)
@@ -241,23 +215,23 @@ func (m ExportModal) inputBody() string {
 
 func (m ExportModal) runningBody() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		modalTitleStyle.Render("Exporting..."),
+		theme.Modal.Title.Render("Exporting..."),
 		"",
 		m.progress.View(),
 		"",
-		modalHintStyle.Render(m.spinner.View()+" Exporting"),
+		theme.Modal.Hint.Render(m.spinner.View()+" Exporting"),
 	)
 }
 
 func (m ExportModal) doneBody() string {
 	hints := lipgloss.JoinHorizontal(lipgloss.Left,
-		keyChipStyle.Render("enter"), modalHintStyle.Render(" Close"),
+		theme.Modal.KeyChip.Render("enter"), theme.Modal.Hint.Render(" Close"),
 	)
 	return lipgloss.JoinVertical(lipgloss.Left,
-		modalSuccessStyle.Render("Export complete"),
+		theme.Modal.Success.Render("Export complete"),
 		"",
 		"Output:",
-		dimStyle.Render(truncate(m.output, modalContent)),
+		theme.Dim.Render(truncate(m.output, modalContent)),
 		"",
 		hints,
 	)
@@ -273,12 +247,12 @@ func (m ExportModal) failedBody() string {
 		}
 	}
 	hints := lipgloss.JoinHorizontal(lipgloss.Left,
-		keyChipStyle.Render("enter"), modalHintStyle.Render(" Close"),
+		theme.Modal.KeyChip.Render("enter"), theme.Modal.Hint.Render(" Close"),
 	)
 	return lipgloss.JoinVertical(lipgloss.Left,
-		modalErrorStyle.Render("Export failed"),
+		theme.Modal.Error.Render("Export failed"),
 		"",
-		dimStyle.Render(strings.Join(shown, "\n")),
+		theme.Dim.Render(strings.Join(shown, "\n")),
 		"",
 		hints,
 	)

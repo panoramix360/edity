@@ -34,11 +34,11 @@ func (p Preview) SetSize(w, h int) Preview {
 }
 
 func (p Preview) Render(clips []clip.Clip, selected int, focused bool) string {
-	paneStyle := defaultPaneStyle
-	headerS := headerStyle
+	paneStyle := theme.Pane.Default
+	headerS := theme.Pane.Header
 	if focused {
-		paneStyle = activePaneStyle
-		headerS = activeHeaderStyle
+		paneStyle = theme.Pane.Active
+		headerS = theme.Pane.ActiveHeader
 	}
 
 	header := headerS.Render("Preview")
@@ -52,11 +52,11 @@ func (p Preview) Render(clips []clip.Clip, selected int, focused bool) string {
 			"",
 			"  "+filepath.Base(c.Path),
 			"",
-			dimStyle.Render("  Duration   "+formatDuration(c.Duration())),
-			dimStyle.Render("  Video      "+formatRes(c.Meta.Width, c.Meta.Height)+"  "+fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
-			dimStyle.Render("  Codec      "+c.Meta.Codec),
+			theme.Dim.Render("  Duration   "+formatDuration(c.Duration())),
+			theme.Dim.Render("  Video      "+formatRes(c.Meta.Width, c.Meta.Height)+"  "+fmt.Sprintf("%.2ffps", c.Meta.FrameRate)),
+			theme.Dim.Render("  Codec      "+c.Meta.Codec),
 			"",
-			dimStyle.Render("  Playback coming in v0.4"),
+			theme.Dim.Render("  Playback coming in v0.4"),
 		)
 	}
 

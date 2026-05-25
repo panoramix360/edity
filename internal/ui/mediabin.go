@@ -43,12 +43,12 @@ func (b MediaBin) Update(msg tea.Msg) (MediaBin, tea.Cmd) {
 
 func (b MediaBin) Render(width, height int, focused bool) string {
 	list := b.list
-	paneStyle := defaultPaneStyle
+	paneStyle := theme.Pane.Default
 	if focused {
-		list.Styles.Title = activeHeaderStyle
-		paneStyle = activePaneStyle
+		list.Styles.Title = theme.Pane.ActiveHeader
+		paneStyle = theme.Pane.Active
 	} else {
-		list.Styles.Title = headerStyle
+		list.Styles.Title = theme.Pane.Header
 	}
 	return paneStyle.Width(width).Height(height).Render(list.View())
 }
@@ -89,24 +89,12 @@ func (b MediaBin) FullHelp() [][]key.Binding {
 
 func newBinList(clips []clip.Clip) list.Model {
 	d := list.NewDefaultDelegate()
-	d.Styles.NormalTitle = lipgloss.NewStyle().Padding(0, 0, 0, 2)
-	d.Styles.NormalDesc = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")).Padding(0, 0, 0, 2)
-
-	d.Styles.SelectedTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("10")).Bold(true).
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(lipgloss.Color("10")).
-		Padding(0, 0, 0, 1)
-	d.Styles.SelectedDesc = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")).
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(lipgloss.Color("10")).
-		Padding(0, 0, 0, 1)
-
-	d.Styles.DimmedTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")).Padding(0, 0, 0, 2)
-	d.Styles.DimmedDesc = d.Styles.DimmedTitle
+	d.Styles.NormalTitle = theme.Bin.NormalTitle
+	d.Styles.NormalDesc = theme.Bin.NormalDesc
+	d.Styles.SelectedTitle = theme.Bin.SelectedTitle
+	d.Styles.SelectedDesc = theme.Bin.SelectedDesc
+	d.Styles.DimmedTitle = theme.Bin.DimmedTitle
+	d.Styles.DimmedDesc = theme.Bin.DimmedTitle
 
 	d.SetSpacing(0)
 
@@ -117,11 +105,11 @@ func newBinList(clips []clip.Clip) list.Model {
 	list.SetShowStatusBar(false)
 	list.DisableQuitKeybindings()
 
-	list.Styles.Title = headerStyle
+	list.Styles.Title = theme.Pane.Header
 	list.Styles.TitleBar = lipgloss.NewStyle().PaddingBottom(1)
-	list.Styles.NoItems = dimStyle.PaddingLeft(2)
-	list.Styles.Spinner = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))
-	list.Styles.Filter.Focused.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))
-	list.Styles.Filter.Blurred.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))
+	list.Styles.NoItems = theme.Dim.PaddingLeft(2)
+	list.Styles.Spinner = theme.Bin.Spinner
+	list.Styles.Filter.Focused.Prompt = theme.Bin.FilterPrompt
+	list.Styles.Filter.Blurred.Prompt = theme.Bin.FilterPrompt
 	return list
 }
