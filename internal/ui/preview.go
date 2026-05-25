@@ -33,23 +33,12 @@ func (p Preview) SetSize(w, h int) Preview {
 	return p
 }
 
-func (p Preview) Render(clips []clip.Clip, selected int, focused bool) string {
-	paneStyle := theme.Pane.Default
-	headerS := theme.Pane.Header
-	if focused {
-		paneStyle = theme.Pane.Active
-		headerS = theme.Pane.ActiveHeader
-	}
-
-	header := headerS.Render("Preview")
-
+func (p Preview) Render(clips []clip.Clip, selected int) string {
 	var lines []string
-	lines = append(lines, header)
 
 	if len(clips) > 0 && selected >= 0 && selected < len(clips) {
 		c := clips[selected]
 		lines = append(lines,
-			"",
 			"  "+filepath.Base(c.Path),
 			"",
 			theme.Dim.Render("  Duration   "+formatDuration(c.Duration())),
@@ -60,5 +49,5 @@ func (p Preview) Render(clips []clip.Clip, selected int, focused bool) string {
 		)
 	}
 
-	return paneStyle.Width(p.width).Height(p.height).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }

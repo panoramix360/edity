@@ -20,10 +20,10 @@ const (
 )
 
 const (
-	epsilon    = 0.001
-	defaultFPS = 30.0
+	epsilon      = 0.001
+	defaultFPS   = 30.0
+	paneOverhead = 4
 )
-
 
 type Model struct {
 	clips                []clip.Clip
@@ -71,9 +71,9 @@ func (m Model) recalcLayout() Model {
 	m.previewW = m.width - m.binW
 	m.previewH = m.binH
 
-	m.bin = m.bin.SetSize(m.binW-2, m.binH-2)
-	m.timeline = m.timeline.SetSize(m.timelineW, m.timelineH)
-	m.preview = m.preview.SetSize(m.previewW, m.previewH)
+	m.bin = m.bin.SetSize(m.binW-2, m.binH-paneOverhead)
+	m.timeline = m.timeline.SetSize(m.timelineW-2, m.timelineH-paneOverhead)
+	m.preview = m.preview.SetSize(m.previewW-2, m.previewH-paneOverhead)
 	return m
 }
 
@@ -185,11 +185,20 @@ func (m Model) View() tea.View {
 	return v
 }
 
+func (m Model) renderPane(title, inner string, w, h int, focused bool) string {
+	paneStyle, headerS := theme.Pane.Default, theme.Pane.Header
+	if focused {
+		paneStyle, headerS = theme.Pane.Active, theme.Pane.ActiveHeader
+	}
+	content := lipgloss.JoinVertical(lipgloss.Left, headerS.Render(title), "", inner)
+	return paneStyle.Width(w).Height(h).Render(content)
+}
+
 func (m Model) renderMainView() string {
-	mediaBin := m.bin.Render(m.binW, m.binH, m.focusedPane == PaneMediaBin)
-	preview := m.preview.Render(m.clips, m.selected, m.focusedPane == PanePreview)
+	mediaBin := m.renderPane("Media Bin", m.bin.Render(), m.binW, m.binH, m.focusedPane == PaneMediaBin)
+	preview := m.renderPane("Preview", m.preview.Render(m.clips, m.selected), m.previewW, m.previewH, m.focusedPane == PanePreview)
+	timeline := m.renderPane("Timeline", m.timeline.Render(), m.timelineW, m.timelineH, m.focusedPane == PaneTimeline)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, mediaBin, preview)
-	timeline := m.timeline.Render(m.focusedPane == PaneTimeline)
 	helpBar := lipgloss.NewStyle().PaddingLeft(1).Render(m.help.View(m.activeKeyMap()))
 
 	return lipgloss.JoinVertical(lipgloss.Left, top, timeline, helpBar)

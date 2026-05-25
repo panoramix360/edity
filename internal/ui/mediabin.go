@@ -7,7 +7,6 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/panoramix360/edity/internal/clip"
 )
 
@@ -41,16 +40,8 @@ func (b MediaBin) Update(msg tea.Msg) (MediaBin, tea.Cmd) {
 	return b, cmd
 }
 
-func (b MediaBin) Render(width, height int, focused bool) string {
-	list := b.list
-	paneStyle := theme.Pane.Default
-	if focused {
-		list.Styles.Title = theme.Pane.ActiveHeader
-		paneStyle = theme.Pane.Active
-	} else {
-		list.Styles.Title = theme.Pane.Header
-	}
-	return paneStyle.Width(width).Height(height).Render(list.View())
+func (b MediaBin) Render() string {
+	return b.list.View()
 }
 
 func (b MediaBin) SetSize(w, h int) MediaBin {
@@ -103,10 +94,9 @@ func newBinList(clips []clip.Clip) list.Model {
 
 	list.SetShowHelp(false)
 	list.SetShowStatusBar(false)
+	list.SetShowTitle(false)
 	list.DisableQuitKeybindings()
 
-	list.Styles.Title = theme.Pane.Header
-	list.Styles.TitleBar = lipgloss.NewStyle().PaddingBottom(1)
 	list.Styles.NoItems = theme.Dim.PaddingLeft(2)
 	list.Styles.Spinner = theme.Bin.Spinner
 	list.Styles.Filter.Focused.Prompt = theme.Bin.FilterPrompt

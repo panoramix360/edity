@@ -86,18 +86,9 @@ func (t Timeline) Update(msg tea.Msg) (Timeline, tea.Cmd) {
 	return t, nil
 }
 
-func (t Timeline) Render(focused bool) string {
-	paneStyle := theme.Pane.Default
-	headerS := theme.Pane.Header
-	if focused {
-		paneStyle = theme.Pane.Active
-		headerS = theme.Pane.ActiveHeader
-	}
-
-	innerW := t.width - 2
+func (t Timeline) Render() string {
+	innerW := t.width
 	var lines []string
-	lines = append(lines, headerS.Render("Timeline"))
-	lines = append(lines, "")
 
 	if len(t.clips) == 0 {
 		lines = append(lines, theme.Dim.Render("  No clips loaded"))
@@ -164,7 +155,7 @@ func (t Timeline) Render(focused bool) string {
 		lines = append(lines, theme.Dim.Render(fmt.Sprintf("  Playhead  %s", formatPlayhead(t.playheadPos, c.Meta.FrameRate))))
 	}
 
-	return paneStyle.Width(t.width).Height(t.height).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
 func (t Timeline) timelineTotal() float64 {
